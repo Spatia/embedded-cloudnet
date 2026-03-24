@@ -8,8 +8,8 @@ from cloud_dataset import CloudDataset
 
 if __name__ == "__main__":
     LEARNING_RATE = 3e-4
-    BATCH_SIZE = 32
-    EPOCHS = 2
+    BATCH_SIZE = 16
+    EPOCHS = 20
     DATA_PATH = "./dataset"
     MODEL_SAVE_PATH = "unet.pth"
 
@@ -62,6 +62,7 @@ if __name__ == "__main__":
 
             val_loss = val_running_loss / (idx + 1)
 
+        torch.cuda.empty_cache()
         print("-"*30)
         print(f"Train Loss EPOCH {epoch+1}: {train_loss:.4f}")
         print(f"Valid Loss EPOCH {epoch+1}: {val_loss:.4f}")
