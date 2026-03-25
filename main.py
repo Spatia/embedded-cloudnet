@@ -7,9 +7,9 @@ from unet import Unet
 from cloud_dataset import CloudDataset
 
 if __name__ == "__main__":
-    LEARNING_RATE = 3e-4
-    BATCH_SIZE = 16
-    EPOCHS = 20
+    LEARNING_RATE = 1e-4
+    BATCH_SIZE = 12
+    EPOCHS = 5
     DATA_PATH = "./dataset"
     MODEL_SAVE_PATH = "unet.pth"
 
@@ -44,6 +44,8 @@ if __name__ == "__main__":
             train_running_loss += loss.item()
             
             loss.backward()
+
+            #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
         train_loss = train_running_loss / (idx + 1)

@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from unet_parts import DownSample, UpSample, DoubleConv
 
-class Unet(nn.Module):
+class Unet_31M(nn.Module):
     def __init__(self, in_channels, num_classes):
         super().__init__()
         self.down1 = DownSample(in_channels, 64)
@@ -34,6 +34,36 @@ class Unet(nn.Module):
         up_4 = self.up4(up_3, down_1)
 
         out=self.out(up_4)
+
+        return out
+    
+class Unet(nn.Module):
+    def __init__(self, in_channels, num_classes):
+        super().__init__()
+        self.down1 = DownSample(in_channels, 64)
+        self.down2 = DownSample(64, 128)
+        self.down3 = DownSample(128, 256)
+
+        self.bottleneck = DoubleConv(256, 512)
+
+        self.up1 = UpSample(512, 256)
+        self.up2 = UpSample(256, 128)
+        self.up3 = UpSample(128, 64)
+
+        self.out = nn.Conv2d(64, out_channels=num_classes, kernel_size=1)
+    
+    def forward(self, x):
+        down_1, p1 = self.down1(x)
+        down_2, p2 = self.down2(p1)
+        down_3, p3 = self.down3(p2)
+
+        b=self.bottleneck(p3)
+
+        up_1 = self.up1(b, down_3)
+        up_2 = self.up2(up_1, down_2)
+        up_3 = self.up3(up_2, down_1)
+
+        out=self.out(up_3)
 
         return out
 
