@@ -8,8 +8,28 @@ Make the inference of the model as lightweight as possible through differents st
 
 ## To-do list
 - [x] Having a model that works pretty well
-- [ ] Optimizing & Quantize the model
+- [x] Optimizing the model
+- [ ] Quantize the model
 - [ ] Using Rust for inference
 
 ## 1 - Having a model that works pretty well
-![image](inference_result.png)
+![image](inference_result_31M/test_1.png)
+
+## 2 - Optimizing & Quantize the model
+For the optimization part, I tried to remove some layers in the U-Net. This leads to 4 models, summarized bellow:
+
+|DownSample|Bottleneck|Upsample|BatchNorm|Model size (in parameters)|
+|----------|----------|--------|---------|----------|
+|4|1|4|No|31M|
+|3|1|3|Yes|7M|
+|2|1|2|Yes|1M|
+|1|1|1|Yes|400k|
+
+And the results are the following:
+
+| |Train|Test 1|Test 2|
+|-|-----|------|------|
+|31M|![image](inference_result_31M/train.png)|![image](inference_result_31M/test_1.png)|![image](inference_result_31M/test_2.png)|
+|7M|![image](inference_result_7M/train.png)|![image](inference_result_7M/test_1.png)|![image](inference_result_7M/test_2.png)|
+|1M|![image](inference_result_1M/train.png)|![image](inference_result_1M/test_1.png)|![image](inference_result_1M/test_2.png)|
+|400k|![image](inference_result_400k/train.png)|![image](inference_result_400k/test_1.png)|![image](inference_result_400k/test_2.png)|

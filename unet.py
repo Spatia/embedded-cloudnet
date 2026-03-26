@@ -1,22 +1,22 @@
 import torch
 import torch.nn as nn
 
-from unet_parts import DownSample, UpSample, DoubleConv
+from unet_parts import DownSample, UpSample, DoubleConv,  DownSample_31M, UpSample_31M, DoubleConv_31M
 
 class Unet_31M(nn.Module):
     def __init__(self, in_channels, num_classes):
         super().__init__()
-        self.down1 = DownSample(in_channels, 64)
-        self.down2 = DownSample(64, 128)
-        self.down3 = DownSample(128, 256)
-        self.down4 = DownSample(256, 512)
+        self.down1 = DownSample_31M(in_channels, 64)
+        self.down2 = DownSample_31M(64, 128)
+        self.down3 = DownSample_31M(128, 256)
+        self.down4 = DownSample_31M(256, 512)
 
-        self.bottleneck = DoubleConv(512, 1024)
+        self.bottleneck = DoubleConv_31M(512, 1024)
 
-        self.up1 = UpSample(1024, 512)
-        self.up2 = UpSample(512, 256)
-        self.up3 = UpSample(256, 128)
-        self.up4 = UpSample(128, 64)
+        self.up1 = UpSample_31M(1024, 512)
+        self.up2 = UpSample_31M(512, 256)
+        self.up3 = UpSample_31M(256, 128)
+        self.up4 = UpSample_31M(128, 64)
 
         self.out = nn.Conv2d(64, out_channels=num_classes, kernel_size=1)
     
@@ -37,7 +37,7 @@ class Unet_31M(nn.Module):
 
         return out
     
-class Unet(nn.Module):
+class Unet_7M(nn.Module):
     def __init__(self, in_channels, num_classes):
         super().__init__()
         self.down1 = DownSample(in_channels, 64)
@@ -64,6 +64,54 @@ class Unet(nn.Module):
         up_3 = self.up3(up_2, down_1)
 
         out=self.out(up_3)
+
+        return out
+
+class Unet_1M(nn.Module):
+    def __init__(self, in_channels, num_classes):
+        super().__init__()
+        self.down1 = DownSample(in_channels, 64)
+        self.down2 = DownSample(64, 128)
+
+        self.bottleneck = DoubleConv(128, 256)
+
+        self.up1 = UpSample(256, 128)
+        self.up2 = UpSample(128, 64)
+
+        self.out = nn.Conv2d(64, out_channels=num_classes, kernel_size=1)
+    
+    def forward(self, x):
+        down_1, p1 = self.down1(x)
+        down_2, p2 = self.down2(p1)
+
+        b=self.bottleneck(p2)
+
+        up_1 = self.up1(b, down_2)
+        up_2 = self.up2(up_1, down_1)
+
+        out=self.out(up_2)
+
+        return out
+    
+class Unet(nn.Module):
+    def __init__(self, in_channels, num_classes):
+        super().__init__()
+        self.down1 = DownSample(in_channels, 64)
+
+        self.bottleneck = DoubleConv(64, 128)
+
+        self.up1 = UpSample(128, 64)
+
+        self.out = nn.Conv2d(64, out_channels=num_classes, kernel_size=1)
+    
+    def forward(self, x):
+        down_1, p1 = self.down1(x)
+
+        b=self.bottleneck(p1)
+
+        up_1 = self.up1(b, down_1)
+
+        out=self.out(up_1)
 
         return out
 

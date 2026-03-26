@@ -7,9 +7,9 @@ from unet import Unet
 from cloud_dataset import CloudDataset
 
 if __name__ == "__main__":
-    LEARNING_RATE = 1e-4
-    BATCH_SIZE = 12
-    EPOCHS = 5
+    LEARNING_RATE = 3e-5
+    BATCH_SIZE = 20
+    EPOCHS = 20
     DATA_PATH = "./dataset"
     MODEL_SAVE_PATH = "unet.pth"
 
@@ -27,6 +27,11 @@ if __name__ == "__main__":
                                 shuffle=True)
 
     model = Unet(in_channels=4, num_classes=1).to(device)
+
+    #Print the number of parameters in the model
+    num_params = sum(p.numel() for p in model.parameters())
+    print(f"Number of parameters in the model: {num_params}")
+
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
     criterion = nn.BCEWithLogitsLoss()
 
@@ -45,7 +50,7 @@ if __name__ == "__main__":
             
             loss.backward()
 
-            #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
         train_loss = train_running_loss / (idx + 1)
