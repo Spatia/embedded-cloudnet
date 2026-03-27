@@ -8,12 +8,6 @@ from torchvision import transforms
 class CloudDataset(Dataset):
     def __init__(self, root_path, test=False):
         self.root_path = root_path
-        # if test:
-        #     self.red_images = sorted([root_path+"/38-Cloud_test/"+i for i in os.listdir(root_path+"/manual_test/")])
-        #     self.blue_images = sorted([root_path+"/38-Cloud_test/"+i for i in os.listdir(root_path+"/manual_test/")])
-        #     self.green_images = sorted([root_path+"/38-Cloud_test/"+i for i in os.listdir(root_path+"/manual_test/")])
-        #     self.masks = sorted([root_path+"/38-Cloud_test/"+i for i in os.listdir(root_path+"/manual_test_masks/")])
-        # else:
         self.images_red = sorted([root_path+"/38-Cloud_training/train_red/" + i for i in os.listdir(root_path+"/38-Cloud_training/train_red/")])
         self.images_green = sorted([root_path+"/38-Cloud_training/train_green/" + i for i in os.listdir(root_path+"/38-Cloud_training/train_green/")])
         self.images_blue = sorted([root_path+"/38-Cloud_training/train_blue/" + i for i in os.listdir(root_path+"/38-Cloud_training/train_blue/")])
