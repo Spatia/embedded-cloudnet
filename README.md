@@ -37,7 +37,7 @@ And the results are the following:
 The results are promising, but the 400k model tent to be unstable in its prediction. The 1M seems to be a good trade-off between size and performance.
 
 ## 3 - Quantize the model
-### First try: Post-training static quantization
+### First try: Post-training static quantization (PTQ)
 First, I used the post-training static quantization method from PyTorch. The process involves the following steps:
 1. Load the pre-trained model.
 2. Prepare the model for quantization by inserting observers.
@@ -45,4 +45,15 @@ First, I used the post-training static quantization method from PyTorch. The pro
 4. Convert the model to INT8 format.
 
 But the results are not good. There are some visible "floating point error" as we can see on the following comparison between the FP32 1M model and the quantized 1M model:
-![image](inference_result_1M/comparison.png)
+![image](inference_result_1M/comparison_PTQ.png)
+
+### Second try: Quantization-aware training (QAT)
+Given the poor results from post-training static quantization, I decided to try quantization-aware training.
+The process involves the following steps:
+1. Load the pre-trained model.
+2. Prepare the model for quantization-aware training by inserting fake quantization modules.
+3. Train the model as usual, from scratch and with the pre-trained weights
+4. Convert the trained model to INT8 format.
+
+The results for the "from scratch" training are clearly disappointing, as we can see on the following comparison between the FP32 1M model and the quantized 1M model. We have the same "floating point error", just a little bit less visible, but still very present.
+![image](inference_result_1M/comparison_QAT_FS.png)

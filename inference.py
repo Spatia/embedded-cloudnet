@@ -8,7 +8,7 @@ import tifffile
 import warnings
 
 from cloud_dataset import CloudDataset
-from unet import Unet, Unet_1M, Unet_7M, Unet_31M
+from unet import Unet, Unet_1M, Unet_7M, Unet_31M, Unet_1M_Q
 
 warnings.filterwarnings("ignore", message="The given buffer is not writable")
 
@@ -25,7 +25,30 @@ def single_image_inference(image_paths, model_pth, device, output_path="inferenc
         loaded_program = torch.export.load(model_pth)
         model = loaded_program.module()
     else:
-        model = Unet_1M(in_channels=4, num_classes=1).to(device)
+        device = "cpu"
+        model_fp32 = Unet_1M_Q(in_channels=4, num_classes=1).to(device)
+        model_fp32.eval()
+
+        import torch.ao.quantization as quantization
+        import torch.nn as nn
+        import unet_parts
+        
+        model_fp32.qconfig = quantization.get_default_qat_qconfig('fbgemm')
+        per_tensor_qconfig = quantization.QConfig(
+            activation=model_fp32.qconfig.activation,
+            weight=quantization.default_weight_fake_quant
+        )
+        for module in model_fp32.modules():
+            if isinstance(module, nn.ConvTranspose2d):
+                module.qconfig = per_tensor_qconfig
+                
+        # for module in model_fp32.modules():
+        #     if isinstance(module, unet_parts.DoubleConv) or hasattr(module, 'fuse_model'):
+        #         module.fuse_model()
+
+        model_prepared = quantization.prepare(model_fp32)
+        model = quantization.convert(model_prepared)
+
         model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
 
     channels = []
@@ -51,7 +74,7 @@ def single_image_inference(image_paths, model_pth, device, output_path="inferenc
     print(f"Min logit: {pred_mask.min():.4f}")
     print(f"Max logit: {pred_mask.max():.4f}")
     print(f"Mean logit: {pred_mask.mean():.4f}")
-    pred_mask = np.where(pred_mask > 1, 1, 0)  # Thresholding
+    pred_mask = np.where(pred_mask > 1.5, 1, 0)  # Thresholding
     
     # Affichage
     fig, axes = plt.subplots(2, 3, figsize=(10, 10))
@@ -96,16 +119,44 @@ def batch_comparison_inference(image_paths_list, models, device, output_path="in
             device = "cpu"
             model = torch.jit.load(model_pth, map_location=device)
         elif model_pth.endswith(".pt2"):
+            device = "cuda" if torch.cuda.is_available() else "cpu"
             loaded_program = torch.export.load(model_pth)
             model = loaded_program.module()
-        else:
+        elif model_pth.endswith("unet_1M.pth"):
+            device = "cuda" if torch.cuda.is_available() else "cpu"
             model = Unet_1M(in_channels=4, num_classes=1).to(device)
+            model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
+        else:
+            device = "cpu"
+            model_fp32 = Unet_1M_Q(in_channels=4, num_classes=1).to(device)
+            model_fp32.eval()
+
+            import torch.ao.quantization as quantization
+            import torch.nn as nn
+            #import unet_parts
+            
+            model_fp32.qconfig = quantization.get_default_qat_qconfig('fbgemm')
+            per_tensor_qconfig = quantization.QConfig(
+                activation=model_fp32.qconfig.activation,
+                weight=quantization.default_weight_fake_quant
+            )
+            for module in model_fp32.modules():
+                if isinstance(module, nn.ConvTranspose2d):
+                    module.qconfig = per_tensor_qconfig
+                    
+            # for module in model_fp32.modules():
+            #     if isinstance(module, unet_parts.DoubleConv) or hasattr(module, 'fuse_model'):
+            #         module.fuse_model()
+                    
+            model_prepared = quantization.prepare(model_fp32)
+            model = quantization.convert(model_prepared)
+
             model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
         
         if not model_pth.endswith(".pt2"):
             model.eval()
         loaded_models.append((model, model_pth))
-    
+
     # Process each image
     for img_idx, image_paths in enumerate(image_paths_list):
         channels = []
@@ -115,10 +166,13 @@ def batch_comparison_inference(image_paths_list, models, device, output_path="in
             channels.append(img_array)
         
         img_4ch = np.stack(channels, axis=0)
-        img_tensor = torch.from_numpy(img_4ch).to(device).unsqueeze(0)
+        img_tensor_base = torch.from_numpy(img_4ch).unsqueeze(0)
         
         # Inference for each model
         for model_idx, (model, model_pth) in enumerate(loaded_models):
+            current_device = "cpu" if model_pth.endswith(".pt") else ("cuda" if torch.cuda.is_available() else "cpu")
+            img_tensor = img_tensor_base.to(current_device)
+            
             with torch.no_grad():
                 pred_mask = model(img_tensor)
             
@@ -149,9 +203,11 @@ if __name__ == "__main__":
             'mask': f'./dataset/38-Cloud_{"training" if type == "train" else "test"}/{type}_gt/gt_patch_{image_name}.TIF'
         })
 
+    print(image_list)
+
 
     model_pth = "./models/unet_1M_int8.pt"
     device = "cuda" if torch.cuda.is_available() else "cpu"
     
-    #single_image_inference(image_paths[0], model_pth, device)
-    batch_comparison_inference(image_list, [model_pth, "./models/unet_1M.pth"], device, output_path="comparison.png", model_names=["1M FP32","1M INT8"])
+    #single_image_inference(image_list[2], model_pth, device)
+    batch_comparison_inference(image_list, ["./models/unet_1M.pth", model_pth], device, output_path="comparison.png", model_names=["1M FP32","1M INT8"])

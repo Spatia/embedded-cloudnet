@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
+from torch.ao.quantization import QuantStub, DeQuantStub
 
-from unet_parts import DownSample, UpSample, DoubleConv,  DownSample_31M, UpSample_31M, DoubleConv_31M
+from unet_parts import DownSample, DownSample_Q, UpSample, UpSample_Q, DoubleConv, DoubleConv_Q, DownSample_31M, UpSample_31M, DoubleConv_31M
 
 class Unet_31M(nn.Module):
     def __init__(self, in_channels, num_classes):
@@ -93,7 +94,39 @@ class Unet_1M(nn.Module):
 
         return out
     
-class Unet(nn.Module):
+class Unet_1M_Q(nn.Module):
+    def __init__(self, in_channels, num_classes):
+        super().__init__()
+
+        self.quant = QuantStub()
+        self.dequant = DeQuantStub()
+
+        self.down1 = DownSample_Q(in_channels, 64)
+        self.down2 = DownSample_Q(64, 128)
+
+        self.bottleneck = DoubleConv_Q(128, 256)
+
+        self.up1 = UpSample_Q(256, 128)
+        self.up2 = UpSample_Q(128, 64)
+
+        self.out = nn.Conv2d(64, out_channels=num_classes, kernel_size=1)
+    
+    def forward(self, x):
+        x = self.quant(x)
+        down_1, p1 = self.down1(x)
+        down_2, p2 = self.down2(p1)
+
+        b=self.bottleneck(p2)
+
+        up_1 = self.up1(b, down_2)
+        up_2 = self.up2(up_1, down_1)
+
+        out=self.out(up_2)
+        out = self.dequant(out)
+
+        return out
+    
+class Unet_400K(nn.Module):
     def __init__(self, in_channels, num_classes):
         super().__init__()
         self.down1 = DownSample(in_channels, 64)
@@ -119,7 +152,7 @@ if __name__=='__main__':
     double_conv = DoubleConv(256,256)
     print(double_conv)
 
-    input_image = torch.rand((1,3,512,512))
-    model=Unet(3,10)
+    input_image = torch.rand((1,3,384,384))
+    model=Unet_400K(3,10)
     output = model(input_image)
     print(output.size())
