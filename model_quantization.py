@@ -21,7 +21,7 @@ def quantize_cnn_int8(model_path, output_path, calibration_data):
 
     qconfig_mapping = get_default_qconfig_mapping("qnnpack")
     
-    example_inputs = (torch.randn(1, 4, 256, 256),) 
+    example_inputs = (torch.randn(1, 4, 384, 384),) 
     prepared_model = prepare_fx(model, qconfig_mapping, example_inputs)
 
     with torch.no_grad():
