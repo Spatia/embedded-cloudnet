@@ -28,12 +28,12 @@ Here are the acronyms used in this repo:
 ## 2 - Optimizing the model
 For the optimization part, I tried to remove some layers in the U-Net. This leads to 4 models, summarized bellow:
 
-|DownSample|Bottleneck|Upsample|BatchNorm|Model size (in parameters)|
-|----------|----------|--------|---------|----------|
-|4|1|4|No|31M|
-|3|1|3|Yes|7M|
-|2|1|2|Yes|1M|
-|1|1|1|Yes|400k|
+|DownSample|Bottleneck|Upsample|BatchNorm|Parameters|File size|
+|----------|----------|--------|---------|----------|---------|
+|4|1|4|No|31M|124Mo|
+|3|1|3|Yes|7M|31Mo|
+|2|1|2|Yes|1M|7.5Mo|
+|1|1|1|Yes|400k|1.6Mo|
 
 And the results are the following:
 
@@ -77,3 +77,9 @@ The results are pretty surprising, as the PTQ method seems to be better, more st
 - The "with pre-trained weights" is not as good as the PTQ method, because the fine-tuning process overfits the model and add some noise in the prediction. I tried with a sixth and a half of the epoch, but it didn't change much the results.
 
 ![image](inference_result_1M/comparison_all_int8.png)
+|Model size|Quantization|Type|File size|
+|----------|------------|----|---------|
+|1M|-|-|7.5Mo|
+|1M|PTQ|INT8|2Mo|
+|1M|QAT|INT8 FS|2Mo|
+|1M|QAT|INT8 FT|2Mo|
