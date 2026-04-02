@@ -21,19 +21,22 @@ Here are the acronyms used in this repo:
 - FP32: full precision 32-bit floating point
 - INT8: 8-bit integer quantization
 - ?M or ?k: model size in number of parameters (e.g. 1M = 1e6 parameters, 400k = 400e3 parameters)
+- ?D?U: number of downsampling and upsampling layers (e.g. 4D4U = 4 downsampling and 4 upsampling layers)
+- IoU: Intersection over Union (a metric between 0 and 1, higher is better)
+- MACs: Multiply-Accumulate Operations (a measure of computational complexity, lower is better)
 
 ## 1 - Having a model that works pretty well
 ![image](inference_result_31M/test_1.png)
 
 ## 2 - Optimizing the model
-For the optimization part, I tried to remove some layers in the U-Net. This leads to 4 models, summarized bellow:
+For the optimization part, I tried to remove some layers in the U-Net. This leads to 4 models all with 1 bottleneck, summarized bellow:
 
-|DownSample|Bottleneck|Upsample|BatchNorm|Parameters|File size|
-|----------|----------|--------|---------|----------|---------|
-|4|1|4|No|31M|124Mo|
-|3|1|3|Yes|7M|31Mo|
-|2|1|2|Yes|1M|7.5Mo|
-|1|1|1|Yes|400k|1.6Mo|
+|Architecture|BatchNorm|Parameters|Avg. IoU| MACs | File size|
+|------------|---------|----------|--------|------|----------|
+|4D4U|No|31M|-|123G|124Mo|
+|3D3U|Yes|7M|0.8812|94G|31Mo|
+|2D2U|Yes|1M|0.8787|64G|7.5Mo|
+|1D1U|Yes|400k|0.8664|35G|1.6Mo|
 
 And the results are the following:
 
@@ -44,7 +47,11 @@ And the results are the following:
 |1M|![image](inference_result_1M/train.png)|![image](inference_result_1M/test_1.png)|![image](inference_result_1M/test_2.png)|
 |400k|![image](inference_result_400k/train.png)|![image](inference_result_400k/test_1.png)|![image](inference_result_400k/test_2.png)|
 
-The results are promising, but the 400k model tent to be unstable in its prediction. The 1M seems to be a good trade-off between size and performance.
+
+### Conclusion of the optimization part
+The results are promising, but the 400k model tent to be unstable in its prediction and spot clouds where there are none regardless of the threshold. This is not acceptable: we rather send useless data than deleting useful data. The 1M is a good trade-off between size and performance. For the moment, the models are clearly too heavy for MCU inference (35-123G MACs).
+![image](inference_result_31M/comparison_all.png)
+
 
 ## 3 - Quantize the model (1M, INT8)
 ### First try: Post-training static quantization (PTQ)
@@ -72,14 +79,14 @@ The results for the "with pre-trained weights" where better, but still not as go
 ![image](inference_result_1M/comparison_QAT_FT_int8.png)
 
 ### Conclusion of the quantization part
-The results are pretty surprising, as the PTQ method seems to be better, more stable and easier to implement than the QAT method. Here are my theories:
+The results are pretty surprising, as the PTQ method is clearly better (best IoU), more stable and easier to implement than the QAT method. Here are my theories:
 - The "from scratch" QAT can't be as good as the PTQ method, because during the training, the gradient is not as accurate due to the fake quantization modules.
 - The "with pre-trained weights" is not as good as the PTQ method, because the fine-tuning process overfits the model and add some noise in the prediction. I tried with a sixth and a half of the epoch, but it didn't change much the results.
 
 ![image](inference_result_1M/comparison_all_int8.png)
-|Model size|Quantization|Type|File size|
-|----------|------------|----|---------|
-|1M|-|-|7.5Mo|
-|1M|PTQ|INT8|2Mo|
-|1M|QAT|INT8 FS|2Mo|
-|1M|QAT|INT8 FT|2Mo|
+|Model size|Quantization|Type|Avg. IoU|File size|
+|----------|------------|----|---|---------|
+|1M|-|-|-|7.5Mo|
+|1M|PTQ|INT8|0.9726|2Mo|
+|1M|QAT|INT8 FS|0.8717|2Mo|
+|1M|QAT|INT8 FT|0.9177|2Mo|
