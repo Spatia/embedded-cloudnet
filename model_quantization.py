@@ -63,6 +63,6 @@ if __name__ == "__main__":
         img_4ch = np.stack([img_red, img_green, img_blue, img_nir], axis=0)
         images_arrays.append(torch.from_numpy(img_4ch).unsqueeze(0))
     
-    dummy_calibration_data = [img.to("cpu") for img in images_arrays] 
+    calibration_data = [img.to("cpu") for img in images_arrays] 
     
-    quantize_cnn_int8(original_model_path, quantized_out_path, dummy_calibration_data)
+    quantize_cnn_int8(original_model_path, quantized_out_path, calibration_data)
