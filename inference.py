@@ -8,17 +8,17 @@ import tifffile
 import warnings
 import torchprofile
 
-from cloud_dataset import CloudDataset
-from unet import Unet_1M, Unet_7M, Unet_31M, Unet_1M_Q, Unet_400K
+from unet import Unet, Unet_31M, Unet_1M_Q, Unet_Depthwise
 
 warnings.filterwarnings("ignore", message="The given buffer is not writable")
 torch.backends.quantized.engine = 'qnnpack'
 
-def single_image_inference(image_paths, model_pth, device, output_path="inference_result.png"):
+def single_image_inference(image_paths, model_pth, device, output_path="inference_result.png", threshold=0.5):
     """
     image_paths: dict ou liste avec les 4 fichiers TIFF
     Ex: {'red': 'path/red.tif', 'green': 'path/green.tif', 'nir': 'path/nir.tif', 'blue': 'path/blue.tif'}
     output_path: path to save the result figure (default: inference_result.png)
+    threshold: threshold for binarizing the prediction (default: 0.5)
     """
     if model_pth.endswith(".pt"):
         device = "cpu"
@@ -82,6 +82,34 @@ def single_image_inference(image_paths, model_pth, device, output_path="inferenc
 
         model.load_state_dict(torch.load(model_pth, map_location=torch.device('cpu')))
         model.eval()
+    elif model_pth.endswith("unet_dw_96k.pth"):
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = Unet_Depthwise(in_channels=4, num_classes=1, down_layers=2, up_layers=2, first_layer_channel=32).to(device)
+        model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
+    elif model_pth.endswith("unet_400k.pth"):
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = Unet(in_channels=4, num_classes=1, down_layers=1, up_layers=1, first_layer_channel=64).to(device)
+        model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
+    elif model_pth.endswith("unet_460k.pth"):
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = Unet(in_channels=4, num_classes=1, down_layers=2, up_layers=2, first_layer_channel=32).to(device)
+        model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
+    elif model_pth.endswith("unet_1M.pth"):
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = Unet(in_channels=4, num_classes=1, down_layers=2, up_layers=2, first_layer_channel=64).to(device)
+        model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
+    elif model_pth.endswith("unet_7M.pth"):
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = Unet(in_channels=4, num_classes=1, down_layers=3, up_layers=3, first_layer_channel=64).to(device)
+        model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
+    elif model_pth.endswith("unet_31M.pth"):
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = Unet_31M(in_channels=4, num_classes=1).to(device)
+        model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
+    else:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = Unet(in_channels=4, num_classes=1, down_layers=2, up_layers=2, first_layer_channel=64).to(device)
+        model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
 
 
     channels = []
@@ -107,7 +135,7 @@ def single_image_inference(image_paths, model_pth, device, output_path="inferenc
     print(f"Min logit: {pred_mask.min():.4f}")
     print(f"Max logit: {pred_mask.max():.4f}")
     print(f"Mean logit: {pred_mask.mean():.4f}")
-    pred_mask = np.where(pred_mask >2, 1, 0)  # Thresholding
+    pred_mask = np.where(pred_mask > threshold, 1, 0)  # Thresholding
     
     # Affichage
     fig, axes = plt.subplots(2, 3, figsize=(10, 10))
@@ -156,17 +184,25 @@ def batch_comparison_inference(image_paths_list, models, thresholds, device, out
             device = "cuda" if torch.cuda.is_available() else "cpu"
             loaded_program = torch.export.load(model_pth)
             model = loaded_program.module()
+        elif model_pth.endswith("unet_dw_96k.pth"):
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            model = Unet_Depthwise(in_channels=4, num_classes=1, down_layers=2, up_layers=2, first_layer_channel=32).to(device)
+            model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
         elif model_pth.endswith("unet_400k.pth"):
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            model = Unet_400K(in_channels=4, num_classes=1).to(device)
+            model = Unet(in_channels=4, num_classes=1, down_layers=1, up_layers=1, first_layer_channel=64).to(device)
+            model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
+        elif model_pth.endswith("unet_460k.pth"):
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            model = Unet(in_channels=4, num_classes=1, down_layers=2, up_layers=2, first_layer_channel=32).to(device)
             model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
         elif model_pth.endswith("unet_1M.pth"):
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            model = Unet_1M(in_channels=4, num_classes=1).to(device)
+            model = Unet(in_channels=4, num_classes=1, down_layers=2, up_layers=2, first_layer_channel=64).to(device)
             model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
         elif model_pth.endswith("unet_7M.pth"):
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            model = Unet_7M(in_channels=4, num_classes=1).to(device)
+            model = Unet(in_channels=4, num_classes=1, down_layers=3, up_layers=3, first_layer_channel=64).to(device)
             model.load_state_dict(torch.load(model_pth, map_location=torch.device(device)))
         elif model_pth.endswith("unet_31M.pth"):
             device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -232,6 +268,7 @@ def batch_comparison_inference(image_paths_list, models, thresholds, device, out
     source_pred_masks = []
     IoUs = [[] for _ in range(len(models))]
     macs = [[] for _ in range(len(models))]
+    logits = [[] for _ in range(len(models))]
 
     # Process each image
     for img_idx, image_paths in enumerate(image_paths_list):
@@ -250,8 +287,12 @@ def batch_comparison_inference(image_paths_list, models, thresholds, device, out
             img_tensor = img_tensor_base.to(current_device)
             
             with torch.no_grad():
-                macs[model_idx].append(torchprofile.profile_macs(model, img_tensor))
+                try:
+                    macs[model_idx].append(torchprofile.profile_macs(model, img_tensor))
+                except Exception as _:
+                    macs[model_idx].append(float('nan'))
                 pred_mask = model(img_tensor)
+                logits[model_idx].append([pred_mask.min().item(), pred_mask.max().item(), pred_mask.mean().item()])
             
             pred_mask = pred_mask.squeeze(0).cpu().detach().numpy()
             pred_mask = np.where(pred_mask > thresholds[model_idx], 1, 0)
@@ -265,7 +306,8 @@ def batch_comparison_inference(image_paths_list, models, thresholds, device, out
 
             axes[model_idx, img_idx].imshow(pred_mask[0], cmap="gray")
             if model_names:
-                axes[model_idx, img_idx].set_title(f"{model_names[model_idx]} - {"IoU = {:.4f}".format(IoUs[model_idx][-1]) if model_idx > 0 else 'Reference'}")
+                title_suffix = f"IoU = {IoUs[model_idx][-1]:.4f}" if model_idx > 0 else "Reference"
+                axes[model_idx, img_idx].set_title(f"{model_names[model_idx]} - {title_suffix}")
             else:
                 axes[model_idx, img_idx].set_title(f"Model {model_idx+1} - Image {img_idx+1}")
             axes[model_idx, img_idx].set_xticks([])
@@ -275,15 +317,10 @@ def batch_comparison_inference(image_paths_list, models, thresholds, device, out
     plt.savefig(output_path, dpi=100, bbox_inches='tight')
     print(f"Comparison figure saved to {output_path}")
     for model_idx, (model, model_pth) in enumerate(loaded_models):
-        if model_idx == 0:
-            print(f"Model {model_idx+1} (Reference): IoU = 1.0000")
-            avg_macs = np.mean(macs[model_idx])
-            print(f"Model {model_idx+1} ({model_pth}): Average MACs = {avg_macs:.2f}")
-        else:
             avg_iou = np.mean(IoUs[model_idx])
-            print(f"Model {model_idx+1} ({model_pth}): Average IoU = {avg_iou:.4f}")
             avg_macs = np.mean(macs[model_idx])
-            print(f"Model {model_idx+1} ({model_pth}): Average MACs = {avg_macs:.2f}")
+            logits_arr = np.asarray(logits[model_idx])
+            print(f"Model {model_idx+1} ({model_pth})   \t IoU = {avg_iou:.4f}\t MACs = {avg_macs:.2f}\t Logits (min, max, mean) = {logits_arr[:,0].mean():.4f}, {logits_arr[:,1].mean():.4f}, {logits_arr[:,2].mean():.4f}")
     plt.close()
 
 def calculate_iou(mask1, mask2):
@@ -315,12 +352,15 @@ if __name__ == "__main__":
         })
 
 
-    model_pth = "unet_1M_QAT_FT_int8.pth"
+    model_pth = "unet_dw_96k.pth"
+    threshold = 2
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # The two first crop the mask
-    # single_image_inference(image_list[0], model_pth, device, output_path="test_1.png")
-    # single_image_inference(image_list[1], model_pth, device, output_path="test_2.png")
-    # single_image_inference(image_list[2], model_pth, device, output_path="train.png")
+    # single_image_inference(image_list[0], model_pth, device, output_path="test_1.png", threshold=threshold)
+    # single_image_inference(image_list[1], model_pth, device, output_path="test_2.png", threshold=threshold)
+    # single_image_inference(image_list[2], model_pth, device, output_path="train.png", threshold=threshold)
 
+    # batch_comparison_inference(image_list, ["./models/unet_31M.pth", "./models/unet_7M.pth", "./models/unet_1M.pth", "unet_1M.pth", "./models/unet_400k.pth"], [0,2,2,2,3], device, output_path="comparison_all.png", model_names=["31M (4D4U)","7M (3D3U)","1M (2D2U)", "1M V2 (2D2U)", "400k (1D1U)"])
+    # batch_comparison_inference(image_list, ["./models/unet_31M.pth", "./models/unet_1M.pth", "./models/unet_460k.pth", "./models/unet_400k.pth"], [0,2,3,3], device, output_path="comparison_all_2.png", model_names=["31M (64FF)","1M (64FF)","460k (32FF)", "400k (64FF)"])
     # batch_comparison_inference(image_list, ["./models/unet_1M.pth", "./models/unet_1M_PTQ_int8.pt", "./models/unet_1M_QAT_FS_int8.pth","./models/unet_1M_QAT_FT_int8.pth"], [2,2,2,2], device, output_path="comparison_all_Q.png", model_names=["1M FP32","1M PTQ INT8","1M QAT FS INT8","1M QAT FT INT8"])
-    batch_comparison_inference(image_list, ["./models/unet_31M.pth", "./models/unet_7M.pth", "./models/unet_1M.pth","./models/unet_400k.pth"], [0,2,1,3], device, output_path="comparison_all_sizes.png", model_names=["31M FP32","7M FP32","1M FP32","1M PTQ INT8"])
+    # batch_comparison_inference(image_list, ["./models/unet_1M.pth", "./models/unet_1M_PTQ_int8.pt", "./models/unet_460k.pth", "./models/unet_460k_int8.pt", "./models/unet_dw_96k.pth", "./models/unet_dw_96k_int8.pt"], [2,2,3,3,2,2], device, output_path="comparison_all.png", model_names=["1M FP32","1M PTQ INT8","460k FP32","460k INT8", "96k FP32", "96k INT8"])

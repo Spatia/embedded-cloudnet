@@ -1,4 +1,5 @@
 dataset/
 __pycache__/
-unet*.pth
-unet*.pte
+*.pth
+*.pt
+*.pte

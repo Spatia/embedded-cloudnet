@@ -10,6 +10,7 @@ Make the inference of the model as lightweight as possible through differents st
 - [x] Having a model that works pretty well
 - [x] Optimizing the model
 - [x] Quantize the model
+- [x] Pushing the limit of optimization
 - [ ] Using Rust for inference
 
 ### One last thing
@@ -20,6 +21,8 @@ Here are the acronyms used in this repo:
 - FT: Fine-tuning (with pre-trained weights)
 - FP32: full precision 32-bit floating point
 - INT8: 8-bit integer quantization
+- DW: Depthwise separable convolution (reduces the number of parameters and computations)
+- ?FF: number of filters in the first layer (e.g. 64 FF = 64 filters in the first layer)
 - ?M or ?k: model size in number of parameters (e.g. 1M = 1e6 parameters, 400k = 400e3 parameters)
 - ?D?U: number of downsampling and upsampling layers (e.g. 4D4U = 4 downsampling and 4 upsampling layers)
 - IoU: Intersection over Union (a metric between 0 and 1, higher is better)
@@ -29,6 +32,7 @@ Here are the acronyms used in this repo:
 ![image](inference_result_31M/test_1.png)
 
 ## 2 - Optimizing the model
+### Reducing the number of parameters
 For the optimization part, I tried to remove some layers in the U-Net. This leads to 4 models all with 1 bottleneck, summarized bellow:
 
 |Architecture|BatchNorm|Parameters|Avg. IoU| MACs | File size|
@@ -40,17 +44,18 @@ For the optimization part, I tried to remove some layers in the U-Net. This lead
 
 And the results are the following:
 
-| |Train|Test 1|Test 2|
-|-|-----|------|------|
-|31M|![image](inference_result_31M/train.png)|![image](inference_result_31M/test_1.png)|![image](inference_result_31M/test_2.png)|
-|7M|![image](inference_result_7M/train.png)|![image](inference_result_7M/test_1.png)|![image](inference_result_7M/test_2.png)|
-|1M|![image](inference_result_1M/train.png)|![image](inference_result_1M/test_1.png)|![image](inference_result_1M/test_2.png)|
-|400k|![image](inference_result_400k/train.png)|![image](inference_result_400k/test_1.png)|![image](inference_result_400k/test_2.png)|
+![image](inference_result_31M/comparison_all.png)
 
+The results are promising, but the 400k model tent to be unstable in its prediction and spot clouds where there are none regardless of the threshold. We rather send useless data than deleting useful data. For the moment, the models are clearly too heavy for MCU inference (35-123G MACs).
+
+### Reducing the initial number of filters
+I also tried to reduce the initial number of filters, which is 64 in the original model. I tried with 32 and 16 filters, but the 16 filters produced completly white masks.
+![image](inference_result_31M/comparison_all_2.png)
+
+The 32 filters (2D2U) model is pretty good, its IoU is better than all the other models, and it is more stable than the 400k model. It also uses only 16GMACs (half of the 400k model), which is pretty good, but still too much for MCU inference. We will keep this model for the quantization part.
 
 ### Conclusion of the optimization part
-The results are promising, but the 400k model tent to be unstable in its prediction and spot clouds where there are none regardless of the threshold. This is not acceptable: we rather send useless data than deleting useful data. The 1M is a good trade-off between size and performance. For the moment, the models are clearly too heavy for MCU inference (35-123G MACs).
-![image](inference_result_31M/comparison_all.png)
+The 1M is a good trade-off between size and performance. 
 
 
 ## 3 - Quantize the model (1M, INT8)
@@ -90,3 +95,18 @@ The results are pretty surprising, as the PTQ method is clearly better (best IoU
 |1M|PTQ|INT8|0.9726|2Mo|
 |1M|QAT|INT8 FS|0.8717|2Mo|
 |1M|QAT|INT8 FT|0.9177|2Mo|
+
+## 4 - Pushing the limit of optimization
+At this point, I was still not satisfied with the size of the model. I wanted to push the limit of optimization, and see how far I can go while keeping a good performance. I tried to use depthwise separable convolution, which is a technique that reduces the number of parameters and computations by factorizing a standard convolution into a depthwise convolution and a pointwise convolution. This technique is widely used in mobile and embedded models, such as MobileNet.
+
+I hade to rework completely the flow of the training. In this goal, I implemented:
+- Dice loss, a IoU-based loss function
+- A new training loop, with a scheduler and early stopping
+- D4 data augmentation (random horizontal and vertical flip, random rotation)
+- I also realized that some of the images in the dataset were completely empty (no data)... So I filtered them out and trained the model only on the non-empty images.
+
+The results were pretty good. With all these optimizations (+ costless PTQ quantization), I was able to train a model with only 96k parameters, an average IoU of 0.8644, 4GMAC and a file size of 0.2Mo. The model is pretty stable (not as good as the 1M model, but still pretty good for its size).
+
+![image](inference_result_96k/comparison_all.png)
+
+I will export this model to ONNX and try to run it on a MCU.

@@ -3,7 +3,7 @@ from torch.ao.quantization.quantize_fx import prepare_fx, convert_fx
 from torch.ao.quantization.qconfig_mapping import get_default_qconfig_mapping
 import torch
 import torch.export
-from unet import Unet_1M
+from unet import Unet, Unet_Depthwise
 import numpy as np
 import tifffile
 import os
@@ -15,7 +15,7 @@ def quantize_cnn_int8(model_path, output_path, calibration_data):
     """
     print(f"Loading model from {model_path} for Native INT8 Quantization...")
     
-    model = Unet_1M(in_channels=4, num_classes=1)
+    model = Unet_Depthwise(in_channels=4, num_classes=1, down_layers=2, up_layers=2, first_layer_channel=32)
     model.load_state_dict(torch.load(model_path, map_location="cpu"))
     model.eval()
 
@@ -38,8 +38,8 @@ def quantize_cnn_int8(model_path, output_path, calibration_data):
     print(f"Quantized model saved to {output_path}")
 
 if __name__ == "__main__":
-    original_model_path = './models/unet_1M.pth'
-    quantized_out_path = './models/unet_1M_int8.pt'
+    original_model_path = './models/unet_dw_96k.pth'
+    quantized_out_path = './models/unet_dw_96k_int8.pt'
 
     image_folder = "./dataset/38-Cloud_training/train_"
 

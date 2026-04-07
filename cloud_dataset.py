@@ -1,18 +1,31 @@
 import os
+import pandas as pd
 from PIL import Image
 import numpy as np
 from torch.utils.data.dataset import Dataset
 import torch
-from torchvision import transforms
 
 class CloudDataset(Dataset):
-    def __init__(self, root_path, test=False):
+    def __init__(self, root_path, csv_path=None, augment=True):
         self.root_path = root_path
-        self.images_red = sorted([root_path+"/38-Cloud_training/train_red/" + i for i in os.listdir(root_path+"/38-Cloud_training/train_red/")])
-        self.images_green = sorted([root_path+"/38-Cloud_training/train_green/" + i for i in os.listdir(root_path+"/38-Cloud_training/train_green/")])
-        self.images_blue = sorted([root_path+"/38-Cloud_training/train_blue/" + i for i in os.listdir(root_path+"/38-Cloud_training/train_blue/")])
-        self.images_nir = sorted([root_path+"/38-Cloud_training/train_nir/" + i for i in os.listdir(root_path+"/38-Cloud_training/train_nir/")])
-        self.masks = sorted([root_path+"/38-Cloud_training/train_gt/" + i for i in os.listdir(root_path+"/38-Cloud_training/train_gt/")])
+        self.augment = augment
+
+        # Si un CSV est fourni, on charge uniquement les images listées dedans
+        if csv_path is not None:
+            df = pd.read_csv(csv_path)
+            # Les noms dans le CSV sont du type "patch_X_Y...", les fichiers rajoutent le préfixe de couleur et ".TIF"
+            self.images_red = [os.path.join(root_path, "38-Cloud_training/train_red/", f"red_{name}.TIF") for name in df['name']]
+            self.images_green = [os.path.join(root_path, "38-Cloud_training/train_green/", f"green_{name}.TIF") for name in df['name']]
+            self.images_blue = [os.path.join(root_path, "38-Cloud_training/train_blue/", f"blue_{name}.TIF") for name in df['name']]
+            self.images_nir = [os.path.join(root_path, "38-Cloud_training/train_nir/", f"nir_{name}.TIF") for name in df['name']]
+            self.masks = [os.path.join(root_path, "38-Cloud_training/train_gt/", f"gt_{name}.TIF") for name in df['name']]
+        else:
+            # Ancien comportement de secours (toutes les images)
+            self.images_red = sorted([root_path+"/38-Cloud_training/train_red/" + i for i in os.listdir(root_path+"/38-Cloud_training/train_red/")])
+            self.images_green = sorted([root_path+"/38-Cloud_training/train_green/" + i for i in os.listdir(root_path+"/38-Cloud_training/train_green/")])
+            self.images_blue = sorted([root_path+"/38-Cloud_training/train_blue/" + i for i in os.listdir(root_path+"/38-Cloud_training/train_blue/")])
+            self.images_nir = sorted([root_path+"/38-Cloud_training/train_nir/" + i for i in os.listdir(root_path+"/38-Cloud_training/train_nir/")])
+            self.masks = sorted([root_path+"/38-Cloud_training/train_gt/" + i for i in os.listdir(root_path+"/38-Cloud_training/train_gt/")])
 
     def __getitem__(self, index):
         img_red = np.array(Image.open(self.images_red[index]), dtype=np.float32)
@@ -20,7 +33,6 @@ class CloudDataset(Dataset):
         img_blue = np.array(Image.open(self.images_blue[index]), dtype=np.float32)
         img_nir = np.array(Image.open(self.images_nir[index]), dtype=np.float32)
 
-        # Normalisation
         img_red = img_red / 65535.0
         img_green = img_green / 65535.0
         img_blue = img_blue / 65535.0
@@ -30,7 +42,19 @@ class CloudDataset(Dataset):
 
         mask = np.array(Image.open(self.masks[index]).convert("L"), dtype=np.float32)
         mask = mask / 255.0
-        
+
+        if self.augment:
+            k = np.random.randint(0, 4)
+            img_stacked = np.rot90(img_stacked, k=k, axes=(1, 2))
+            mask = np.rot90(mask, k=k, axes=(0, 1))
+
+            if np.random.rand() < 0.5:
+                img_stacked = np.flip(img_stacked, axis=2)
+                mask = np.flip(mask, axis=1)
+
+        img_stacked = img_stacked.copy()
+        mask = mask.copy()
+
         return torch.from_numpy(img_stacked), torch.from_numpy(mask).unsqueeze(0)
 
     def __len__(self):
