@@ -11,7 +11,7 @@ Make the inference of the model as lightweight as possible through differents st
 - [x] Optimizing the model
 - [x] Quantize the model
 - [x] Pushing the limit of optimization
-- [ ] Using Rust for inference
+- [x] Using Rust for inference
 
 ### One last thing
 Here are the acronyms used in this repo:
