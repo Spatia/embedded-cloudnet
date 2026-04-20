@@ -89,11 +89,11 @@ class UpSample_Q(nn.Module):
         quantization.fuse_modules(self.conv, [['up', 'bn']], inplace=True)
     
 class DepthwiseSeparableConv(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, padding=1):
+    def __init__(self, in_channels, out_channels, kernel_size=3, padding=1, dilation=1):
         super().__init__()
         # On applique un filtre par canal d'entrée
         # Pas de biais car batch norm
-        self.depthwise = nn.Conv2d(in_channels, in_channels, kernel_size=kernel_size, padding=padding, groups=in_channels, bias=False)
+        self.depthwise = nn.Conv2d(in_channels, in_channels, kernel_size=kernel_size, padding=padding, groups=in_channels, bias=False, dilation=dilation)
         self.bn_dw = nn.BatchNorm2d(in_channels)
         self.relu_dw = nn.ReLU(inplace=True)
 
@@ -105,6 +105,22 @@ class DepthwiseSeparableConv(nn.Module):
         x = self.bn_dw(x)
         x = self.relu_dw(x)
         x = self.pointwise(x)
+        return x
+
+class ASPP(nn.Module):
+    def __init__(self, in_channels, out_channels, dilation_rates=[1, 2, 4]):
+        super().__init__()
+        self.branches = nn.ModuleList()
+        for rate in dilation_rates:
+            self.branches.append(
+                DepthwiseSeparableConv(in_channels, out_channels, kernel_size=3, padding=rate, dilation=rate)
+            )
+        self.conv_out = nn.Conv2d(out_channels * len(dilation_rates), out_channels, kernel_size=1)
+
+    def forward(self, x):
+        branch_outputs = [branch(x) for branch in self.branches]
+        x = torch.cat(branch_outputs, dim=1)
+        x = self.conv_out(x)
         return x
 
 class DoubleConv_Depthwise(nn.Module):

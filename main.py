@@ -1,5 +1,7 @@
 import os
 import math
+from PIL import Image
+from utils import format_params, build_model_name
 
 import torch
 from torch import optim, nn
@@ -49,8 +51,8 @@ def save_model(epoch, model_save_path):
     for filename in os.listdir(model_dir):
         os.remove(os.path.join(model_dir, filename))
 
-def build_train_val_datasets(data_path, csv_path, val_ratio=0.2, seed=42):
-    base = CloudDataset(data_path, csv_path=csv_path, augment=False)
+def build_train_val_datasets(data_path, csv_path, val_ratio=0.2, seed=4, resize=None):
+    base = CloudDataset(data_path, csv_path=csv_path, augment=False, resize=resize)
     n_total = len(base)
     n_val = int(n_total * val_ratio)
     n_train = n_total - n_val
@@ -61,25 +63,29 @@ def build_train_val_datasets(data_path, csv_path, val_ratio=0.2, seed=42):
     train_idx = perm[:n_train]
     val_idx = perm[n_train:]
 
-    train_base = CloudDataset(data_path, csv_path=csv_path, augment=True)
-    val_base = CloudDataset(data_path, csv_path=csv_path, augment=False)
+    train_base = CloudDataset(data_path, csv_path=csv_path, augment=True, resize=resize)
+    val_base = CloudDataset(data_path, csv_path=csv_path, augment=False, resize=resize)
 
     return Subset(train_base, train_idx), Subset(val_base, val_idx)
 
 if __name__ == "__main__":
-    LEARNING_RATE = 1e-4
-    BATCH_SIZE = 20
-    EPOCHS = 150
+    LEARNING_RATE = 4e-4
+    BATCH_SIZE = 64
+    EPOCHS = 1000
     DATA_PATH = "./dataset"
     CSV_PATH = "./dataset/training_patches_38-cloud_nonempty.csv"
-    MODEL_SAVE_PATH = "unet_dw_96k.pth"
     PATIENCE = 30
-    BCE_DICE_MIX = [0.9, 0.1]
+    BCE_DICE_MIX = [0.1, 0.9]
+
+    # Hyperparamètres pour le modèle
+    RESIZE = (192, 192)
+    DEPTHWISE = True
+    DILATATION_RATES = [1, 2, 4]
 
     os.makedirs("./tmp_models/", exist_ok=True)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    train_dataset, val_dataset = build_train_val_datasets(DATA_PATH, CSV_PATH, val_ratio=0.2, seed=42)
+    train_dataset, val_dataset = build_train_val_datasets(DATA_PATH, CSV_PATH, val_ratio=0.2, seed=42, resize=RESIZE)
 
     train_dataloader = DataLoader(
         dataset=train_dataset,
@@ -97,11 +103,17 @@ if __name__ == "__main__":
         pin_memory=torch.cuda.is_available(),
     )
 
-    model = Unet_Depthwise(in_channels=4, num_classes=1, down_layers=2, up_layers=2, first_layer_channel=32).to(device)
+    if DEPTHWISE:
+        model = Unet_Depthwise(in_channels=4, num_classes=1, down_layers=2, up_layers=2, first_layer_channel=32, dilation_rates=DILATATION_RATES).to(device)
+    else:
+        model = Unet(in_channels=4, num_classes=1, down_layers=2, up_layers=2, first_layer_channel=32, dilation_rates=DILATATION_RATES).to(device)
 
     #Print the number of parameters in the model
     num_params = sum(p.numel() for p in model.parameters())
-    print(f"Number of parameters in the model: {num_params}")
+    print(f"Number of parameters in the model: {format_params(num_params)}")
+
+    model_save_path = build_model_name(DEPTHWISE, num_params, RESIZE, DILATATION_RATES)
+    print(f"Model will be saved to: {model_save_path}")
 
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 
@@ -109,7 +121,7 @@ if __name__ == "__main__":
     dice = DiceLoss()
     loss_fn = lambda y_pred, mask: BCE_DICE_MIX[0]*bce(y_pred, mask) + BCE_DICE_MIX[1]*dice(y_pred, mask)
 
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
+    scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=20, T_mult=2) #optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
 
     min_val_loss = float("inf")
     patience_counter = 0
@@ -131,6 +143,7 @@ if __name__ == "__main__":
             optimizer.zero_grad(set_to_none=True)
 
             y_pred = model(img)
+
             if not torch.isfinite(y_pred).all():
                 skipped_train += 1
                 continue
@@ -210,11 +223,11 @@ if __name__ == "__main__":
 
         torch.save(model.state_dict(), f"./tmp_models/epoch_{epoch + 1}.pth")
         min_val_loss, patience_counter, continue_training = early_stopping(
-            val_loss, min_val_loss, patience_counter, PATIENCE, epoch + 1, MODEL_SAVE_PATH
+            val_loss, min_val_loss, patience_counter, PATIENCE, epoch + 1, model_save_path
         )
 
         if not continue_training:
             print(f"Early stopping at epoch {epoch + 1}")
             break
 
-    torch.save(model.state_dict(), MODEL_SAVE_PATH + "_final")
+    torch.save(model.state_dict(), model_save_path + "_final")

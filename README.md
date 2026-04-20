@@ -97,6 +97,7 @@ The results are pretty surprising, as the PTQ method is clearly better (best IoU
 |1M|QAT|INT8 FT|0.9177|2Mo|
 
 ## 4 - Pushing the limit of optimization
+### Using depthwise separable convolution
 At this point, I was still not satisfied with the size of the model. I wanted to push the limit of optimization, and see how far I can go while keeping a good performance. I tried to use depthwise separable convolution, which is a technique that reduces the number of parameters and computations by factorizing a standard convolution into a depthwise convolution and a pointwise convolution. This technique is widely used in mobile and embedded models, such as MobileNet.
 
 I hade to rework completely the flow of the training. In this goal, I implemented:
@@ -108,5 +109,3 @@ I hade to rework completely the flow of the training. In this goal, I implemente
 The results were pretty good. With all these optimizations (+ costless PTQ quantization), I was able to train a model with only 96k parameters, an average IoU of 0.8644, 4GMAC and a file size of 0.2Mo. The model is pretty stable (not as good as the 1M model, but still pretty good for its size).
 
 ![image](inference_result_96k/comparison_all.png)
-
-I will export this model to ONNX and try to run it on a MCU.

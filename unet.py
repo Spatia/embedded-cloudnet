@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.ao.quantization import QuantStub, DeQuantStub
 
-from unet_parts import DepthwiseSeparableConv, DoubleConv_Depthwise, DownSample, DownSample_Depthwise, DownSample_Q, UpSample, UpSample_Depthwise, UpSample_Q, DoubleConv, DoubleConv_Q, DownSample_31M, UpSample_31M, DoubleConv_31M
+from unet_parts import ASPP, DepthwiseSeparableConv, DoubleConv_Depthwise, DownSample, DownSample_Depthwise, DownSample_Q, UpSample, UpSample_Depthwise, UpSample_Q, DoubleConv, DoubleConv_Q, DownSample_31M, UpSample_31M, DoubleConv_31M
 
 class Unet_31M(nn.Module):
     def __init__(self, in_channels, num_classes):
@@ -39,7 +39,7 @@ class Unet_31M(nn.Module):
         return out
     
 class Unet(nn.Module):
-    def __init__(self, in_channels, num_classes, down_layers=3, up_layers=3, first_layer_channel=64):
+    def __init__(self, in_channels, num_classes, down_layers=3, up_layers=3, first_layer_channel=64, dilation_rates=None):
         super().__init__()
         self.down_layers = down_layers
         self.up_layers = up_layers
@@ -51,7 +51,10 @@ class Unet(nn.Module):
             setattr(self, f"down{i}", DownSample(channel, channel*2))
             channel*=2
 
-        self.bottleneck = DoubleConv(channel, channel*2)
+        if dilation_rates is not None:
+            self.bottleneck = ASPP(channel, channel*2, dilation_rates=dilation_rates)#DoubleConv_Depthwise(channel, channel*2, dilation=dilation)
+        else:
+            self.bottleneck = DoubleConv(channel, channel*2)
 
         for i in range(1, up_layers+1):
             setattr(self, f"up{i}", UpSample(channel*2, channel))
@@ -77,7 +80,7 @@ class Unet(nn.Module):
         return out
     
 class Unet_Depthwise(nn.Module):
-    def __init__(self, in_channels, num_classes, down_layers=3, up_layers=3, first_layer_channel=64):
+    def __init__(self, in_channels, num_classes, down_layers=3, up_layers=3, first_layer_channel=64, dilation_rates=None):
         super().__init__()
         self.down_layers = down_layers
         self.up_layers = up_layers
@@ -89,7 +92,10 @@ class Unet_Depthwise(nn.Module):
             setattr(self, f"down{i}", DownSample_Depthwise(channel, channel*2))
             channel*=2
 
-        self.bottleneck = DoubleConv_Depthwise(channel, channel*2)
+        if dilation_rates is not None:
+            self.bottleneck = ASPP(channel, channel*2, dilation_rates=dilation_rates)#DoubleConv_Depthwise(channel, channel*2, dilation=dilation)
+        else:
+            self.bottleneck = DoubleConv_Depthwise(channel, channel*2)
 
         for i in range(1, up_layers+1):
             setattr(self, f"up{i}", UpSample_Depthwise(channel*2, channel))
