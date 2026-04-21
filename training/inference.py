@@ -405,15 +405,15 @@ if __name__ == "__main__":
     image_list = []
     for image_name, type in image_names:
         image_list.append({
-            'red': f'./dataset/38-Cloud_{"training" if type == "train" else "test"}/{type}_red/red_patch_{image_name}.TIF',
-            'green': f'./dataset/38-Cloud_{"training" if type == "train" else "test"}/{type}_green/green_patch_{image_name}.TIF',
-            'blue': f'./dataset/38-Cloud_{"training" if type == "train" else "test"}/{type}_blue/blue_patch_{image_name}.TIF',
-            'nir': f'./dataset/38-Cloud_{"training" if type == "train" else "test"}/{type}_nir/nir_patch_{image_name}.TIF',
-            'mask': f'./dataset/38-Cloud_{"training" if type == "train" else "test"}/{type}_gt/gt_patch_{image_name}.TIF' if type == "train" else None
+            'red': f'../dataset/38-Cloud_{"training" if type == "train" else "test"}/{type}_red/red_patch_{image_name}.TIF',
+            'green': f'../dataset/38-Cloud_{"training" if type == "train" else "test"}/{type}_green/green_patch_{image_name}.TIF',
+            'blue': f'../dataset/38-Cloud_{"training" if type == "train" else "test"}/{type}_blue/blue_patch_{image_name}.TIF',
+            'nir': f'../dataset/38-Cloud_{"training" if type == "train" else "test"}/{type}_nir/nir_patch_{image_name}.TIF',
+            'mask': f'../dataset/38-Cloud_{"training" if type == "train" else "test"}/{type}_gt/gt_patch_{image_name}.TIF' if type == "train" else None
         })
 
 
-    model_pth = "unet_dw_96k_ds_192.pth"
+    model_pth = "../models/unet_dw_96k_int8.pt"
     threshold = -3
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # The two first crop the mask

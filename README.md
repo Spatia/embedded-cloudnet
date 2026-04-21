@@ -29,7 +29,7 @@ Here are the acronyms used in this repo:
 - MACs: Multiply-Accumulate Operations (a measure of computational complexity, lower is better)
 
 ## 1 - Having a model that works pretty well
-![image](inference_result_31M/test_1.png)
+![image](inference_results/31M/test_1.png)
 
 ## 2 - Optimizing the model
 ### Reducing the number of parameters
@@ -44,13 +44,13 @@ For the optimization part, I tried to remove some layers in the U-Net. This lead
 
 And the results are the following:
 
-![image](inference_result_31M/comparison_all.png)
+![image](inference_results/31M/comparison_all.png)
 
 The results are promising, but the 400k model tent to be unstable in its prediction and spot clouds where there are none regardless of the threshold. We rather send useless data than deleting useful data. For the moment, the models are clearly too heavy for MCU inference (35-123G MACs).
 
 ### Reducing the initial number of filters
 I also tried to reduce the initial number of filters, which is 64 in the original model. I tried with 32 and 16 filters, but the 16 filters produced completly white masks.
-![image](inference_result_31M/comparison_all_2.png)
+![image](inference_results/31M/comparison_all_2.png)
 
 The 32 filters (2D2U) model is pretty good, its IoU is better than all the other models, and it is more stable than the 400k model. It also uses only 16GMACs (half of the 400k model), which is pretty good, but still too much for MCU inference. We will keep this model for the quantization part.
 
@@ -67,7 +67,7 @@ First, I used the post-training static quantization method from PyTorch. The pro
 4. Convert the model to INT8 format.
 
 The results where surprisingly excellent ! The quantized model is as good as the original model, as it can be seen on the following comparison between the FP32 1M model and the quantized INT8 1M model. 
-![image](inference_result_1M/comparison_PTQ_int8.png)
+![image](inference_results/1M/comparison_PTQ_int8.png)
 
 ### Second try: Quantization-aware training (QAT)
 I also tried the quantization-aware training method.
@@ -78,17 +78,17 @@ The process involves the following steps:
 4. Convert the trained model to INT8 format.
 
 The results for the "from scratch" training are not as good as the PTQ method, but still pretty good. The quantized model is slightly worse, specially on the test 1, where it recognize more clouds, but the results are still pretty good. In general, it tends to struggle to draw a clean outline of the clouds.
-![image](inference_result_1M/comparison_QAT_FS_int8.png)
+![image](inference_results/1M/comparison_QAT_FS_int8.png)
 
 The results for the "with pre-trained weights" where better, but still not as good as the PTQ method. On the test 2, the model recognize more clouds. We can also see a little bit more noise in the prediction.
-![image](inference_result_1M/comparison_QAT_FT_int8.png)
+![image](inference_results/1M/comparison_QAT_FT_int8.png)
 
 ### Conclusion of the quantization part
 The results are pretty surprising, as the PTQ method is clearly better (best IoU), more stable and easier to implement than the QAT method. Here are my theories:
 - The "from scratch" QAT can't be as good as the PTQ method, because during the training, the gradient is not as accurate due to the fake quantization modules.
 - The "with pre-trained weights" is not as good as the PTQ method, because the fine-tuning process overfits the model and add some noise in the prediction. I tried with a sixth and a half of the epoch, but it didn't change much the results.
 
-![image](inference_result_1M/comparison_all_int8.png)
+![image](inference_results/1M/comparison_all_int8.png)
 |Model size|Quantization|Type|Avg. IoU|File size|
 |----------|------------|----|---|---------|
 |1M|-|-|-|7.5Mo|
@@ -108,4 +108,8 @@ I hade to rework completely the flow of the training. In this goal, I implemente
 
 The results were pretty good. With all these optimizations (+ costless PTQ quantization), I was able to train a model with only 96k parameters, an average IoU of 0.8644, 4GMAC and a file size of 0.2Mo. The model is pretty stable (not as good as the 1M model, but still pretty good for its size).
 
-![image](inference_result_96k/comparison_all.png)
+![image](inference_results/96k/comparison_all.png)
+
+## 5 - Using Rust for inference
+Finally, I wanted to try to use Rust for inference. I used the `ort` crate, which is a Rust binding for the ONNX Runtime.
+Nothing really surprising here, the inference works pretty well and the results are the same as the original model.

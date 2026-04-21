@@ -65,7 +65,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     threshold(2.0, predictions_view, &mut out_img, height, width);
      
     out_img.save("resultat_inference_rust.png")?;
-    println!("Inference terminée et image sauvegardée sous 'resultat_inference_rust.png'.");
+    println!("Inference saved as 'resultat_inference_rust.png'.");
 
     Ok(())
 }
