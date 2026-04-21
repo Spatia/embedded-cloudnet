@@ -7,3 +7,8 @@ __pycache__/
 
 inference/target/
 .venv/
+
+*31M*
+*7M*
+*1M*
+*400k*

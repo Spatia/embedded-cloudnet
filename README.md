@@ -112,4 +112,16 @@ The results were pretty good. With all these optimizations (+ costless PTQ quant
 
 ## 5 - Using Rust for inference
 Finally, I wanted to try to use Rust for inference. I used the `ort` crate, which is a Rust binding for the ONNX Runtime.
-Nothing really surprising here, the inference works pretty well and the results are the same as the original model.
+The results are quite surprising, the inference time is not that different from the Python inference time, and in some cases, it is even faster. The results are summarized in the following table.
+One explanation could be that `ort` is using the same underlying C++ implementation as the Python ONNX Runtime, so the performance should be similar. 
+
+| Model ID | Python Inference Time| Rust Inference Time |
+|----------|----------------------------|--------------------------|
+| 96k INT8 | 175 ms | 47 ms |
+| 96k | 147 ms | 41 ms |
+| 400k INT8 | 185 ms | 89 ms |
+| 400k | 207 ms | 143 ms |
+| 1M INT8 | 232 ms | 143 ms |
+| 1M | 276 ms | 244 ms |
+| 7M | 307 ms | 310 ms |
+| 31M | 400 ms | 408 ms |

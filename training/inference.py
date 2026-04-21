@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import tifffile
 import warnings
 import torchprofile
+import time
 
 from unet import Unet, Unet_31M, Unet_1M_Q, Unet_Depthwise
 
@@ -31,19 +32,23 @@ class ONNXModelWrapper:
         # Ne pas déclencher d'erreur lors de l'appel à model.eval()
         pass
 
-def single_image_inference(image_paths, model_pth, device, output_path="inference_result.png", threshold=0.5):
+def single_image_inference(image_paths, model_pth, device, output_path="inference_result.png", threshold=0.5, benchmark=False):
     """
     image_paths: dict ou liste avec les 4 fichiers TIFF
     Ex: {'red': 'path/red.tif', 'green': 'path/green.tif', 'nir': 'path/nir.tif', 'blue': 'path/blue.tif'}
     output_path: path to save the result figure (default: inference_result.png)
     threshold: threshold for binarizing the prediction (default: 0.5)
     """
+    start_time = time.time()
     if model_pth.endswith(".pt"):
         device = "cpu"
         model = torch.jit.load(model_pth, map_location=device)
     elif model_pth.endswith(".pt2"):
         loaded_program = torch.export.load(model_pth)
         model = loaded_program.module()
+    elif model_pth.endswith(".onnx"):
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            model = ONNXModelWrapper(model_pth)
     elif model_pth.__contains__("QAT_FS"):
         device = "cpu"
         model_fp32 = Unet_1M_Q(in_channels=4, num_classes=1).to(device)
@@ -167,9 +172,10 @@ def single_image_inference(image_paths, model_pth, device, output_path="inferenc
     
     # Post-traitement
     pred_mask = pred_mask.squeeze(0).cpu().detach().numpy()
-    print(f"Min logit: {pred_mask.min():.4f}")
-    print(f"Max logit: {pred_mask.max():.4f}")
-    print(f"Mean logit: {pred_mask.mean():.4f}")
+    if not benchmark:
+        print(f"Min logit: {pred_mask.min():.4f}")
+        print(f"Max logit: {pred_mask.max():.4f}")
+        print(f"Mean logit: {pred_mask.mean():.4f}")
     pred_mask = np.where(pred_mask > threshold, 1, 0)  # Thresholding
 
     if model_pth.__contains__("ds_"):
@@ -177,27 +183,35 @@ def single_image_inference(image_paths, model_pth, device, output_path="inferenc
         pred_mask = torch.nn.functional.interpolate(pred_mask, size=(384, 384), mode='nearest')
         pred_mask = pred_mask.squeeze(0).cpu().numpy()
     
+    end_time = time.time()
+
+    if benchmark:
+        inference_time = (end_time - start_time) * 1000  # Convert to milliseconds
+        print(f"Inference time: {inference_time:.2f} ms")
+        return
+    
     # Affichage
-    fig, axes = plt.subplots(2, 3, figsize=(10, 10))
-    axes[0, 0].imshow(channels[0], cmap="gray")
-    axes[0, 0].set_title("Blue")
-    axes[0, 1].imshow(channels[2], cmap="gray")
-    axes[0, 1].set_title("Red")
-    axes[1, 0].imshow(channels[3], cmap="gray")
-    axes[0, 2].imshow(channels[1], cmap="gray")
-    axes[0, 2].set_title("Green")
-    axes[1, 0].set_title("NIR")
-    axes[1, 1].imshow(pred_mask[0], cmap="gray")
-    axes[1, 1].set_title("Prédiction")
-    if 'mask' in image_paths and image_paths['mask'] is not None:
-        axes[1, 2].imshow(tifffile.imread(image_paths['mask']), cmap="gray")
-        axes[1, 2].set_title("Masque de référence")
-    else:
-        axes[1, 2].axis('off')
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=100, bbox_inches='tight')
-    print(f"Figure saved to {output_path}")
-    plt.close()
+    if not benchmark:
+        fig, axes = plt.subplots(2, 3, figsize=(10, 10))
+        axes[0, 0].imshow(channels[0], cmap="gray")
+        axes[0, 0].set_title("Blue")
+        axes[0, 1].imshow(channels[2], cmap="gray")
+        axes[0, 1].set_title("Red")
+        axes[1, 0].imshow(channels[3], cmap="gray")
+        axes[0, 2].imshow(channels[1], cmap="gray")
+        axes[0, 2].set_title("Green")
+        axes[1, 0].set_title("NIR")
+        axes[1, 1].imshow(pred_mask[0], cmap="gray")
+        axes[1, 1].set_title("Prédiction")
+        if 'mask' in image_paths and image_paths['mask'] is not None:
+            axes[1, 2].imshow(tifffile.imread(image_paths['mask']), cmap="gray")
+            axes[1, 2].set_title("Masque de référence")
+        else:
+            axes[1, 2].axis('off')
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=100, bbox_inches='tight')
+        print(f"Figure saved to {output_path}")
+        plt.close()
 
 def batch_comparison_inference(image_paths_list, models, thresholds, device, output_path="inference_result.png", model_names=None):
     """
@@ -224,6 +238,9 @@ def batch_comparison_inference(image_paths_list, models, thresholds, device, out
             device = "cuda" if torch.cuda.is_available() else "cpu"
             loaded_program = torch.export.load(model_pth)
             model = loaded_program.module()
+        elif model_pth.endswith(".onnx"):
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            model = ONNXModelWrapper(model_pth)
         elif model_pth.__contains__("unet_dw_96k_aspp"):
             device = "cuda" if torch.cuda.is_available() else "cpu"
             model = Unet_Depthwise(in_channels=4, num_classes=1, down_layers=2, up_layers=2, first_layer_channel=32, dilation_rates=[1, 2, 4]).to(device)
@@ -413,13 +430,13 @@ if __name__ == "__main__":
         })
 
 
-    model_pth = "../models/unet_dw_96k_int8.pt"
+    model_pth = "../models/unet_31M.onnx"
     threshold = -3
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # The two first crop the mask
-    single_image_inference(image_list[0], model_pth, device, output_path="test_1.png", threshold=threshold)
-    single_image_inference(image_list[1], model_pth, device, output_path="test_2.png", threshold=threshold)
-    single_image_inference(image_list[2], model_pth, device, output_path="train.png", threshold=threshold)
+    single_image_inference(image_list[0], model_pth, device, output_path="test_1.png", threshold=threshold, benchmark=True)
+    #single_image_inference(image_list[1], model_pth, device, output_path="test_2.png", threshold=threshold)
+    #single_image_inference(image_list[2], model_pth, device, output_path="train.png", threshold=threshold)
 
     # batch_comparison_inference(image_list, ["./models/unet_31M.pth", "./models/unet_7M.pth", "./models/unet_1M.pth", "unet_1M.pth", "./models/unet_400k.pth"], [0,2,2,2,3], device, output_path="comparison_all.png", model_names=["31M (4D4U)","7M (3D3U)","1M (2D2U)", "1M V2 (2D2U)", "400k (1D1U)"])
     # batch_comparison_inference(image_list, ["./models/unet_31M.pth", "./models/unet_1M.pth", "./models/unet_460k.pth", "./models/unet_400k.pth"], [0,2,3,3], device, output_path="comparison_all_2.png", model_names=["31M (64FF)","1M (64FF)","460k (32FF)", "400k (64FF)"])

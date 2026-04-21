@@ -5,6 +5,7 @@ use ort::{
 };
 use image::Luma;
 use ort::value::TensorRef;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 fn load_normalized_tiff(path: &str) -> Result<ndarray::Array2<f32>, Box<dyn std::error::Error>> {
     let img = image::open(path)?.into_luma16();
@@ -30,10 +31,11 @@ fn threshold(threshold: f32, predictions_view: ndarray::ArrayView4<f32>, out_img
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let mut model = Session::builder()?
         .with_optimization_level(GraphOptimizationLevel::Level3)?
         .with_intra_threads(4)?
-        .commit_from_file("../models/unet_dw_96k.onnx")?;
+        .commit_from_file("../models/unet_31M.onnx")?;
 
     let red_path = "../dataset/38-Cloud_test/test_red/red_patch_92_5_by_8_LC08_L1TP_029041_20160720_20170222_01_T1.TIF";
     let green_path = "../dataset/38-Cloud_test/test_green/green_patch_92_5_by_8_LC08_L1TP_029041_20160720_20170222_01_T1.TIF";
@@ -63,6 +65,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut out_img: image::GrayImage = image::ImageBuffer::new(width as u32, height as u32);
 
     threshold(2.0, predictions_view, &mut out_img, height, width);
+
+    let end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let inference_time = (end - start).as_millis();
+    println!("Inference time: {} ms", inference_time);
      
     out_img.save("resultat_inference_rust.png")?;
     println!("Inference saved as 'resultat_inference_rust.png'.");

@@ -1,5 +1,5 @@
 import torch
-from unet import Unet_Depthwise
+from unet import Unet, Unet_Depthwise, Unet_31M
 from onnxruntime.quantization import quantize_static, QuantType, CalibrationDataReader, QuantFormat
 import numpy as np
 import tifffile
@@ -7,9 +7,10 @@ import os
 
 
 def export_model_to_onnx(model_path, output_path):
-    model = Unet_Depthwise(
-        in_channels=4, num_classes=1, down_layers=2, up_layers=2, first_layer_channel=32
-    )
+    model = Unet_31M(in_channels=4, num_classes=1)
+    # model = Unet(
+    #     in_channels=4, num_classes=1, down_layers=3, up_layers=3, first_layer_channel=64
+    # )
     model.load_state_dict(torch.load(model_path, map_location="cpu"))
     model.eval()
 
@@ -47,11 +48,11 @@ def onnx_PTQ(model_input, model_output, calibration_data):
     )
 
 if __name__ == "__main__":
-    original_model_path = './models/unet_dw_96k.pth'
-    onnx_out_path = './models/unet_dw_96k.onnx'
-    quantized_onnx_out_path = './models/unet_dw_96k_int8.onnx'
+    original_model_path = '../models/unet_31M.pth'
+    onnx_out_path = '../models/unet_31M.onnx'
+    quantized_onnx_out_path = '../models/unet_31M_int8.onnx'
 
-    image_folder = "./dataset/38-Cloud_training/train_"
+    image_folder = "../dataset/38-Cloud_training/train_"
 
     images_arrays = []
 
