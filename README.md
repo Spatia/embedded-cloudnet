@@ -110,6 +110,12 @@ The results were pretty good. With all these optimizations (+ costless PTQ quant
 
 ![image](inference_results/96k/comparison_all.png)
 
+### Reducing the input size
+I tried to reduce the inputs image size as it can be seen in the `cloud_dataset.py` file but the results were not good. The model was really unstable.
+Here is one of the results:
+
+![image](inference_results/96k/test_1_downsize.png)
+
 ## 5 - Using Rust for inference
 Finally, I wanted to try to use Rust for inference. I used the `ort` crate, which is a Rust binding for the ONNX Runtime.
 The results are quite surprising, the inference time is not that different from the Python inference time, and in some cases, it is even faster. The results are summarized in the following table.
@@ -125,3 +131,8 @@ One explanation could be that `ort` is using the same underlying C++ implementat
 | 1M | 276 ms | 244 ms |
 | 7M | 307 ms | 310 ms |
 | 31M | 400 ms | 408 ms |
+
+
+# Conclusion
+The results are pretty good, I was able to reduce the model size from 31M parameters to 96k parameters, and the quantized model is still pretty good. I am aware that the 96k model is still too big for MCU inference. I would like to try to push the inputs size reduction further, but each training takes a lot of time, time during which I can't use my computer. The more I reduce the model size, the more I have to test some hyperparameters, train the model, test it, and repeat the process until I find a "good" combination.
+

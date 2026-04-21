@@ -430,11 +430,11 @@ if __name__ == "__main__":
         })
 
 
-    model_pth = "../models/unet_31M.onnx"
-    threshold = -3
+    model_pth = "../models/unet_dw_96k_ds_192.pth"
+    threshold = 1
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # The two first crop the mask
-    single_image_inference(image_list[0], model_pth, device, output_path="test_1.png", threshold=threshold, benchmark=True)
+    single_image_inference(image_list[0], model_pth, device, output_path="test_1.png", threshold=threshold)
     #single_image_inference(image_list[1], model_pth, device, output_path="test_2.png", threshold=threshold)
     #single_image_inference(image_list[2], model_pth, device, output_path="train.png", threshold=threshold)
 
