@@ -1,0 +1,39 @@
+============================================================================================
+Couche                           MAC ANN     SOP SNN  type   entrées≠0   SNN/ANN
+--------------------------------------------------------------------------------------------
+down1.conv.conv_op.0.depthwise   5.290e+06   6.505e+08   MAC     96.07%   122.98x
+down1.conv.conv_op.0.pointwise   1.887e+07   2.151e+08    AC      8.90%    11.40x
+down1.conv.conv_op.3.depthwise   4.232e+07   3.596e+08    AC      6.69%     8.50x
+down1.conv.conv_op.3.pointwise   1.510e+08   1.181e+09    AC      6.11%     7.82x
+down2.conv.conv_op.0.depthwise   1.054e+07   2.304e+08    AC     17.19%    21.85x
+down2.conv.conv_op.0.pointwise   7.550e+07   1.134e+09    AC     11.74%    15.02x
+down2.conv.conv_op.3.depthwise   2.109e+07   3.807e+08    AC     14.12%    18.05x
+down2.conv.conv_op.3.pointwise   1.510e+08   2.080e+09    AC     10.76%    13.77x
+bottleneck.conv_op.0.depthwise   5.235e+06   2.259e+08    AC     33.74%    43.15x
+bottleneck.conv_op.0.pointwise   7.550e+07   1.498e+09    AC     15.51%    19.85x
+bottleneck.conv_op.3.depthwise   1.047e+07   2.250e+08    AC     16.78%    21.49x
+bottleneck.conv_op.3.pointwise   1.510e+08   2.184e+09    AC     11.30%    14.46x
+up1.up                         3.020e+08   5.664e+09    AC     14.65%    18.75x
+up1.conv.conv_op.0.depthwise   4.217e+07   3.072e+09   MAC     56.90%    72.83x
+up1.conv.conv_op.0.pointwise   3.020e+08   5.124e+09    AC     13.26%    16.97x
+up1.conv.conv_op.3.depthwise   2.109e+07   4.662e+08    AC     17.23%    22.11x
+up1.conv.conv_op.3.pointwise   1.510e+08   2.676e+09    AC     13.85%    17.72x
+up2.up                         3.020e+08   5.311e+09    AC     13.74%    17.59x
+up2.conv.conv_op.0.depthwise   8.464e+07   5.743e+09   MAC     53.02%    67.85x
+up2.conv.conv_op.0.pointwise   3.020e+08   3.505e+09    AC      9.07%    11.61x
+up2.conv.conv_op.3.depthwise   4.232e+07   6.715e+08    AC     12.39%    15.87x
+up2.conv.conv_op.3.pointwise   1.510e+08   2.057e+09    AC     10.64%    13.62x
+out.depthwise                  4.719e+06   1.025e+08    AC     16.97%    21.72x
+out.pointwise                  4.719e+06   6.294e+07    AC     10.42%    13.34x
+--------------------------------------------------------------------------------------------
+Par image, T = 128
+  ANN  MAC denses                  : 2.427e+09
+  ANN  MAC sur entrées non nulles  : 1.230e+09   (si le matériel saute les zéros de ReLU)
+  SNN  opérations synaptiques      : 4.482e+10   (AC 3.535e+10 + MAC 9.465e+09)
+  SNN  SOP moyennes par pas de temps: 3.501e+08
+
+  Facteur opérations  ANN / SNN    : 0.05x   (AUGMENTATION)
+  Facteur énergie     ANN / SNN    : 0.15x   (ANN 11166.1 µJ, SNN 75356.8 µJ ; MAC 4.6 pJ, AC 0.9 pJ)
+  T d'équilibre (opérations, ~)    : 6.9
+  T d'équilibre (énergie, ~)       : 19.0
+============================================================================================

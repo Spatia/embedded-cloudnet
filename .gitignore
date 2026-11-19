@@ -12,3 +12,5 @@ inference/target/
 *7M*
 *1M*
 *400k*
+.venv
+dataset

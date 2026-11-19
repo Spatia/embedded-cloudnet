@@ -8,12 +8,13 @@ import numpy as np
 import tifffile
 import copy
 from spikingjelly.activation_based import ann2snn, functional
+from ops_counter import OpCounter, report
 
-from unet import Unet_Depthwise
+from unet import Unet, Unet_Depthwise
 
-MODEL_PTH = "../models/unet_dw_145k_aspp_ds_192.pth_final"
-INPUT_SIZE = 192
-T = 128
+MODEL_PTH = "../models/unet_dw_96k.pth"
+INPUT_SIZE = 384
+T = 4
 THRESHOLD = 0.0
 
 
@@ -51,8 +52,8 @@ if __name__ == "__main__":
 
     calibration_data = [load_image(n)[0] for n in calib_names]
 
-    ann = Unet_Depthwise(in_channels=4, num_classes=1, down_layers=2, up_layers=2,
-                         first_layer_channel=32, dilation_rates=[1, 2, 4])
+    ann = Unet_Depthwise(in_channels=4, num_classes=1, down_layers=2, up_layers=2, first_layer_channel=32)
+    # ann = Unet(in_channels=4, num_classes=1, down_layers=2, up_layers=2)
     ann.load_state_dict(torch.load(MODEL_PTH, map_location="cpu"))
     ann.eval()
 
@@ -63,19 +64,22 @@ if __name__ == "__main__":
 
     #ANN vs SNN
     ious_ann, ious_snn, ious_agree = [], [], []
-    for n in test_names:
-        x, gt = load_image(n)
-        with torch.no_grad():
-            logit_ann = ann(x)
-        logit_snn = snn_forward(snn, x, T)
+    with OpCounter(ann) as ann_cnt, OpCounter(snn, probe_call=T // 2) as snn_cnt:
+        for n in test_names:
+            print(f"Processing {n}...")
+            x, gt = load_image(n)
+            with torch.no_grad():
+                logit_ann = ann(x)
+            logit_snn = snn_forward(snn, x, T)
 
-        m_ann = (logit_ann > THRESHOLD).numpy()
-        m_snn = (logit_snn > THRESHOLD).numpy()
-        ious_ann.append(calculate_iou(m_ann, gt))
-        ious_snn.append(calculate_iou(m_snn, gt))
-        ious_agree.append(calculate_iou(m_ann, m_snn))
+            m_ann = (logit_ann > THRESHOLD).numpy()
+            m_snn = (logit_snn > THRESHOLD).numpy()
+            ious_ann.append(calculate_iou(m_ann, gt))
+            ious_snn.append(calculate_iou(m_snn, gt))
+            ious_agree.append(calculate_iou(m_ann, m_snn))
 
-    print(f"T = {T}")
-    print(f"IoU ANN vs GT : {np.mean(ious_ann):.4f}")
-    print(f"IoU SNN vs GT : {np.mean(ious_snn):.4f}")
-    print(f"IoU ANN vs SNN: {np.mean(ious_agree):.4f}")
+    print(f"ANN IoU: {np.mean(ious_ann):.4f} ± {np.std(ious_ann):.4f}")
+    print(f"SNN IoU: {np.mean(ious_snn):.4f} ± {np.std(ious_snn):.4f}")
+    print(f"ANN/SNN agreement IoU: {np.mean(ious_agree):.4f} ± {np.std(ious_agree):.4f}")
+
+    report(ann_cnt, snn_cnt, len(test_names), T)

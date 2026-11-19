@@ -116,7 +116,23 @@ Here is one of the results:
 
 ![image](inference_results/96k/test_1_downsize.png)
 
-## 5 - Using Rust for inference
+## 5 - Recap of trained models
+Here are every models trained so far
+| Size | Up/Down layers | Quantization | First layer| Conv type | Input Size | MAC | File Size |
+|------|----------------|--------------|------------|-----------|------------|-----|-----------|
+|  31m | 4              | No           |64          | Classical |384         |123G |124Mo      |
+|  7m  | 3              | No           |64          | Classical |384         |94G  |31Mo       |
+|  1m  | 2              | PTQ (INT8)   |64          | Classical |384         |64G  |7.5Mo      |
+|  1m  | 2              | QAT FS (INT8)|64          | Classical |384         |64G  |7.5Mo      |
+|  1m  | 2              | QAT FT (INT8)|64          | Classical |384         |64G  |7.5Mo      |
+| 460k | 2              | No           |32          | Classical |384         |16G  |1.9Mo      |
+| 460k | 2              | PTQ (INT8)   |32          | Classical |384         |16G  |530Ko      |
+| 400k | 1              | No           |64          | Classical |384         |35G  |1.6Mo      |
+| 96k  | 2              | PTQ (INT8)   |32          | Separable |384         |4G   |140Ko      |
+
+The Unet 2D2U PTQ IN8 32FF DW will be kept.
+
+## 6 - Using Rust for inference
 Finally, I wanted to try to use Rust for inference. I used the `ort` crate, which is a Rust binding for the ONNX Runtime.
 The results are quite surprising, the inference time is not that different from the Python inference time, and in some cases, it is even faster. The results are summarized in the following table.
 One explanation could be that `ort` is using the same underlying C++ implementation as the Python ONNX Runtime, so the performance should be similar. 
