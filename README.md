@@ -130,7 +130,7 @@ Here are every models trained so far
 | 400k | 1              | No           |64          | Classical |384         |35G  |1.6Mo      |
 | 96k  | 2              | PTQ (INT8)   |32          | Separable |384         |4G   |140Ko      |
 
-The Unet 2D2U PTQ IN8 32FF DW will be kept.
+The Unet 2D2U PTQ INT8 32FF DW will be kept.
 
 ## 6 - Using Rust for inference
 Finally, I wanted to try to use Rust for inference. I used the `ort` crate, which is a Rust binding for the ONNX Runtime.

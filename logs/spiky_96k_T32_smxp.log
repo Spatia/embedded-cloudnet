@@ -1,0 +1,118 @@
+T=32  v_init=0.0  burn_in=0
+Entrée de la couche                    err_rel     biais
+down1.conv.conv_op.0.depthwise           0.000    -0.00%
+down1.conv.conv_op.0.pointwise           0.142   -11.49%
+down1.conv.conv_op.3.depthwise           0.232   -11.32%
+down1.conv.conv_op.3.pointwise           0.339    -9.10%
+down2.conv.conv_op.0.depthwise           0.405    +4.30%
+down2.conv.conv_op.0.pointwise           0.538    +1.68%
+down2.conv.conv_op.3.depthwise           0.595    -0.62%
+down2.conv.conv_op.3.pointwise           0.677    -9.81%
+bottleneck.conv_op.0.depthwise           0.656    +0.33%
+bottleneck.conv_op.0.pointwise           0.689    -7.03%
+bottleneck.conv_op.3.depthwise           0.728   -17.07%
+bottleneck.conv_op.3.pointwise           0.811   -22.04%
+up1.up                                   0.802   -13.43%
+up1.conv.conv_op.0.depthwise             0.710    -3.47%
+up1.conv.conv_op.0.pointwise             0.694   -21.02%
+up1.conv.conv_op.3.depthwise             0.685   -21.58%
+up1.conv.conv_op.3.pointwise             0.691   -24.17%
+up2.up                                   0.715   -22.44%
+up2.conv.conv_op.0.depthwise             0.568    -4.72%
+up2.conv.conv_op.0.pointwise             0.626   -26.12%
+up2.conv.conv_op.3.depthwise             0.653   -29.75%
+up2.conv.conv_op.3.pointwise             0.726   -35.43%
+out.depthwise                            0.711   -20.31%
+out.pointwise                            0.844   -54.08%
+SORTIE (logits)                          0.897   +18.98%
+
+T=32  v_init=0.5  burn_in=0
+Entrée de la couche                    err_rel     biais
+down1.conv.conv_op.0.depthwise           0.000    -0.00%
+down1.conv.conv_op.0.pointwise           0.106    -0.61%
+down1.conv.conv_op.3.depthwise           0.202    +6.72%
+down1.conv.conv_op.3.pointwise           0.324   +12.47%
+down2.conv.conv_op.0.depthwise           0.483   +38.22%
+down2.conv.conv_op.0.pointwise           0.666   +33.92%
+down2.conv.conv_op.3.depthwise           0.753   +41.10%
+down2.conv.conv_op.3.pointwise           0.795   +29.17%
+bottleneck.conv_op.0.depthwise           0.858   +62.48%
+bottleneck.conv_op.0.pointwise           0.817   +11.48%
+bottleneck.conv_op.3.depthwise           0.864    +9.37%
+bottleneck.conv_op.3.pointwise           0.939   +17.34%
+up1.up                                   0.938    +7.45%
+up1.conv.conv_op.0.depthwise             0.889   +16.09%
+up1.conv.conv_op.0.pointwise             0.857   +14.91%
+up1.conv.conv_op.3.depthwise             0.932   +35.52%
+up1.conv.conv_op.3.pointwise             0.917   +16.31%
+up2.up                                   0.931   +14.81%
+up2.conv.conv_op.0.depthwise             0.725    +4.93%
+up2.conv.conv_op.0.pointwise             0.787   +22.87%
+up2.conv.conv_op.3.depthwise             0.833   +10.74%
+up2.conv.conv_op.3.pointwise             0.799   -12.01%
+out.depthwise                            0.767    -3.17%
+out.pointwise                            0.850    -8.32%
+SORTIE (logits)                          0.961   -70.93%
+Processing patch_95_5_by_7_LC08_L1TP_061017_20160720_20170223_01_T1...
+Processing patch_451_20_by_14_LC08_L1TP_059014_20160620_20170221_01_T1...
+Processing patch_248_12_by_17_LC08_L1TP_047023_20160920_20170221_01_T1...
+Processing patch_216_10_by_18_LC08_L1TP_066017_20160520_20170223_01_T1...
+Processing patch_120_6_by_15_LC08_L1TP_047023_20160920_20170221_01_T1...
+Processing patch_245_12_by_3_LC08_L1TP_064014_20160420_20170223_01_T1...
+Processing patch_205_11_by_5_LC08_L1TP_039034_20160320_20170224_01_T1...
+Processing patch_96_5_by_8_LC08_L1TP_064014_20160420_20170223_01_T1...
+Processing patch_407_19_by_11_LC08_L1TP_061017_20160720_20170223_01_T1...
+Processing patch_53_3_by_11_LC08_L1TP_029040_20160720_20170222_01_T1...
+Processing patch_228_12_by_8_LC08_L1TP_002053_20160520_20170324_01_T1...
+Processing patch_148_8_by_8_LC08_L1TP_002054_20160520_20170324_01_T1...
+Processing patch_155_8_by_8_LC08_L1TP_029040_20160720_20170222_01_T1...
+Processing patch_200_10_by_11_LC08_L1TP_032029_20160420_20170223_01_T1...
+Processing patch_298_15_by_18_LC08_L1TP_039034_20160320_20170224_01_T1...
+Processing patch_120_6_by_10_LC08_L1TP_064014_20160420_20170223_01_T1...
+Processing patch_127_6_by_17_LC08_L1TP_061017_20160720_20170223_01_T1...
+Processing patch_273_14_by_13_LC08_L1TP_002054_20160520_20170324_01_T1...
+Processing patch_103_5_by_19_LC08_L1TP_029040_20160720_20170222_01_T1...
+Processing patch_331_16_by_16_LC08_L1TP_011247_20160620_20170323_01_T1...
+ANN IoU: 0.7421 ± 0.3184
+SNN IoU: 0.1667 ± 0.3257
+ANN/SNN agreement IoU: 0.1161 ± 0.2639
+
+============================================================================================
+Couche                           MAC ANN     SOP SNN  type   entrées≠0   SNN/ANN
+--------------------------------------------------------------------------------------------
+down1.conv.conv_op.0.depthwise   5.290e+06   1.626e+08   MAC     96.07%    30.74x
+down1.conv.conv_op.0.pointwise   1.887e+07   5.489e+07    AC      9.09%     2.91x
+down1.conv.conv_op.3.depthwise   4.232e+07   9.800e+07    AC      7.29%     2.32x
+down1.conv.conv_op.3.pointwise   1.510e+08   3.339e+08    AC      6.91%     2.21x
+down2.conv.conv_op.0.depthwise   1.054e+07   4.619e+07    AC     13.79%     4.38x
+down2.conv.conv_op.0.pointwise   7.550e+07   2.134e+08    AC      8.83%     2.83x
+down2.conv.conv_op.3.depthwise   2.109e+07   6.832e+07    AC     10.14%     3.24x
+down2.conv.conv_op.3.pointwise   1.510e+08   4.236e+08    AC      8.77%     2.81x
+bottleneck.conv_op.0.depthwise   5.235e+06   3.390e+07    AC     20.28%     6.48x
+bottleneck.conv_op.0.pointwise   7.550e+07   2.273e+08    AC      9.41%     3.01x
+bottleneck.conv_op.3.depthwise   1.047e+07   3.482e+07    AC     10.42%     3.33x
+bottleneck.conv_op.3.pointwise   1.510e+08   4.114e+08    AC      8.51%     2.72x
+up1.up                         3.020e+08   1.127e+09    AC     11.66%     3.73x
+up1.conv.conv_op.0.depthwise   4.217e+07   7.473e+08   MAC     55.38%    17.72x
+up1.conv.conv_op.0.pointwise   3.020e+08   9.967e+08    AC     10.31%     3.30x
+up1.conv.conv_op.3.depthwise   2.109e+07   8.877e+07    AC     13.13%     4.21x
+up1.conv.conv_op.3.pointwise   1.510e+08   5.401e+08    AC     11.18%     3.58x
+up2.up                         3.020e+08   1.232e+09    AC     12.75%     4.08x
+up2.conv.conv_op.0.depthwise   8.464e+07   1.455e+09   MAC     53.71%    17.19x
+up2.conv.conv_op.0.pointwise   3.020e+08   9.367e+08    AC      9.69%     3.10x
+up2.conv.conv_op.3.depthwise   4.232e+07   1.774e+08    AC     13.10%     4.19x
+up2.conv.conv_op.3.pointwise   1.510e+08   5.249e+08    AC     10.86%     3.48x
+out.depthwise                  4.719e+06   2.611e+07    AC     17.29%     5.53x
+out.pointwise                  4.719e+06   1.870e+07    AC     12.39%     3.96x
+--------------------------------------------------------------------------------------------
+Par image, T = 32
+  ANN  MAC denses                  : 2.427e+09
+  ANN  MAC sur entrées non nulles  : 1.230e+09   (si le matériel saute les zéros de ReLU)
+  SNN  opérations synaptiques      : 9.979e+09   (AC 7.614e+09 + MAC 2.365e+09)
+  SNN  SOP moyennes par pas de temps: 3.118e+08
+
+  Facteur opérations  ANN / SNN    : 0.24x   (AUGMENTATION)
+  Facteur énergie     ANN / SNN    : 0.63x   (ANN 11166.1 µJ, SNN 17729.4 µJ ; MAC 4.6 pJ, AC 0.9 pJ)
+  T d'équilibre (opérations, ~)    : 7.8
+  T d'équilibre (énergie, ~)       : 20.2
+============================================================================================

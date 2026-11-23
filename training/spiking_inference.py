@@ -9,12 +9,14 @@ import tifffile
 import copy
 from spikingjelly.activation_based import ann2snn, functional
 from ops_counter import OpCounter, report
+from snn_diag import snn_forward, print_layer_errors, layer_errors
+from spiking_maxpool import replace_maxpool
 
 from unet import Unet, Unet_Depthwise
 
 MODEL_PTH = "../models/unet_dw_96k.pth"
 INPUT_SIZE = 384
-T = 4
+T = 32
 THRESHOLD = 0.0
 
 
@@ -35,13 +37,13 @@ def load_image(name, folder="../dataset/38-Cloud_training/train_"):
     return img, mask.numpy()
 
 
-@torch.no_grad()
-def snn_forward(snn, x, T):
-    functional.reset_net(snn)
-    out = 0
-    for _ in range(T):
-        out = out + snn(x)
-    return out / T
+# @torch.no_grad()
+# def snn_forward(snn, x, T):
+#     functional.reset_net(snn)
+#     out = 0
+#     for _ in range(T):
+#         out = out + snn(x)
+#     return out / T
 
 
 if __name__ == "__main__":
@@ -57,10 +59,15 @@ if __name__ == "__main__":
     ann.load_state_dict(torch.load(MODEL_PTH, map_location="cpu"))
     ann.eval()
 
+    # Rate coding limits are clearly shown here.
     recipe = ann2snn.RateCodingRecipe(dataloader=calibration_data, mode="99.9%")
     snn = ann2snn.Converter(recipe).convert(copy.deepcopy(ann))
+    print(replace_maxpool(snn), "MaxPool2d replaced by SpikingMaxPool2d")
     snn.eval()
-    print(snn)
+    x = load_image(test_names[0])[0][..., :128, :128]
+    for T in (32, 128, 512, 2048):
+        rows = layer_errors(ann, snn, x, T=T, v_init=0.0)
+        print(f"T={T:5d}  err couche 2 = {rows[1][1]:.3f}   err logits = {rows[-1][1]:.3f}")
 
     #ANN vs SNN
     ious_ann, ious_snn, ious_agree = [], [], []
@@ -70,7 +77,7 @@ if __name__ == "__main__":
             x, gt = load_image(n)
             with torch.no_grad():
                 logit_ann = ann(x)
-            logit_snn = snn_forward(snn, x, T)
+            logit_snn = snn_forward(snn, x, T, v_init=0.5)
 
             m_ann = (logit_ann > THRESHOLD).numpy()
             m_snn = (logit_snn > THRESHOLD).numpy()
